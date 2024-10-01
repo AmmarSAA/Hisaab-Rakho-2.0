@@ -27,7 +27,9 @@ class TransactionHistory extends StatelessWidget {
     final responsive = Responsive(context);
 
     return Obx(() {
-      if (controller.transactions.isEmpty) {
+      if (controller.isLoading.value) {
+        return const Center(child: CircularProgressIndicator());
+      } else if (controller.transactions.isEmpty) {
         return const Center(child: Text('No transactions found.'));
       } else {
         // Reverse the transactions list to show the most recent first
