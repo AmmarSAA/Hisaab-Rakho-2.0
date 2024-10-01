@@ -14,5 +14,5 @@
 // ignore_for_file: constant_identifier_names
 
 class Constants{
-  static const String DATABASE_URL = "http://192.168.1.115:3000";
+  static const String DATABASE_URL = "https://hisaab-rakho-api-production-bad1.up.railway.app";
 }
