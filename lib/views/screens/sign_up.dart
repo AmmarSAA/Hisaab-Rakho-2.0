@@ -162,7 +162,7 @@ class SignUp extends StatelessWidget {
                               addedSuccessfully['success'] ?? false;
                           String message = addedSuccessfully['message'] ??
                               'Please connect to the internet.';
-                          String title = addedSuccessfully['title'] ?? 'Oops!';
+                          String title = isSuccess ? 'Woohoo!' : 'Oops!';
 
                           if (!isSuccess) {
                             debugPrint('Unknown error occurred');
