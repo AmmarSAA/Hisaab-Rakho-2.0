@@ -46,7 +46,7 @@ class MyApp extends StatelessWidget {
             contentPadding: EdgeInsets.symmetric(vertical: 2.0),
           ),
         ),
-        themeMode: ThemeMode.system,
+        themeMode: ThemeMode.light,
         initialRoute: '/',
         routes: appRoutes);
   }
