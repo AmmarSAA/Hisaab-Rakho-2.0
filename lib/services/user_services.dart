@@ -16,14 +16,15 @@
 /*+------------------------------------------------------------------------------+*/
 
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
-import 'package:hisaab_rakho/utils/constants.dart';
-import 'package:hisaab_rakho/utils/session_manager.dart';
-import 'package:http/http.dart' as http;
 import 'package:hisaab_rakho/models/transactions.dart';
 import 'package:hisaab_rakho/models/users.dart';
 import 'package:hisaab_rakho/services/transaction_services.dart';
+import 'package:hisaab_rakho/utils/constants.dart';
+import 'package:hisaab_rakho/utils/session_manager.dart';
 import 'package:hisaab_rakho/utils/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 class UserService {
   static const String _baseUrl = '${Constants.DATABASE_URL}/users';
@@ -60,33 +61,53 @@ class UserService {
   }
 
   // Add a new user
-  static Future<Object> addUser(AppUser user) async {
-    Object message = {"message": "Something went wrong", "success": false};
+  static Future<Map<String, dynamic>> addUser(AppUser user) async {
+    bool emailExists = false;
+    debugPrint('Adding User:${user.toJson()}');
+    Map<String, dynamic> message = {
+      "message": "Something went wrong!",
+      "success": false
+    };
     try {
       // Check if the email already exists
       final emailCheckResponse = await http.get(
-        Uri.parse('$_baseUrl?email=${user.email}'),
+        Uri.parse(
+            '$_baseUrl?email=${Uri.encodeComponent(user.email.toString())}'),
         headers: {'Content-Type': 'application/json'},
       );
 
-      if (emailCheckResponse.statusCode == 200 &&
+      if (emailCheckResponse.statusCode >= 200 &&
           json.decode(emailCheckResponse.body).isNotEmpty) {
         // Email already exists
         debugPrint('Email already exists: ${user.email}');
         message = {"message": "Email already exists", "success": false};
+        emailExists = true;
+      } else {
+        debugPrint('Email does not exist: ${user.email}');
+        emailExists = false;
       }
 
-      final response = await http.post(
-        Uri.parse(_baseUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(user.toJson()),
-      );
+      if (emailExists == false) {
+        final response = await http.post(
+          Uri.parse(_baseUrl),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode(user.toJson()),
+        );
 
-      if (response.statusCode == 201) {
-        message = {"message": "Sign up successful", "success": true};
-      } else {
-        debugPrint('Error: Status code ${response.statusCode}');
-        message = {"message": "Something went wrong", "success": false};
+        if (response.statusCode >= 200 && response.body.isNotEmpty) {
+          message = {"message": "Sign up successful", "success": true};
+          debugPrint('User added successfully: ${response.body}');
+        } else {
+          debugPrint('Error: Status code ${response.statusCode}');
+          message = {"message": "Something went wrong", "success": false};
+        }
+
+        if (response.statusCode >= 500 && response.statusCode < 600) {
+          message = {
+            "message": "${response.statusCode} Network Error",
+            "success": false
+          };
+        }
       }
     } catch (e) {
       debugPrint('Error adding user: $e');
