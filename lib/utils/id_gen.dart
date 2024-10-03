@@ -10,5 +10,19 @@
 /*| Description: Generate a unique ID for the user                               |*/
 /*+------------------------------------------------------------------------------+*/
 
-int currentTimeLength = DateTime.now().toIso8601String().length;
-String id = DateTime.now().toIso8601String().substring(currentTimeLength - 4,currentTimeLength).toLowerCase();
+import 'dart:math';
+
+String generateUniqueId() {
+  // Get the current timestamp in milliseconds since epoch
+  int timestamp = DateTime.now().millisecondsSinceEpoch;
+
+  // Generate a random 4-character alphanumeric string
+  const String chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  Random random = Random();
+  String randomString = List.generate(4, (index) => chars[random.nextInt(chars.length)]).join();
+
+  // Combine the timestamp and the random string
+  return '$timestamp-$randomString';
+}
+
+String id = generateUniqueId();
