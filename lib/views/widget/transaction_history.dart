@@ -105,8 +105,9 @@ class TransactionHistory extends StatelessWidget {
                     confirmText: 'Delete',
                   ),
                 );
-
-                confirm ?? controller.deleteTransaction(transaction.id!);
+                if (confirm == true) {
+                  controller.deleteTransaction(transaction.id.toString());
+                }
               }
             },
             itemBuilder: (context) => [
