@@ -4,4 +4,5 @@ Simple solution to track your finances.
 
 ## Demo Video
 
-<video controls src="Hisaab Rakho 2.0 App Demo Video.mp4" title="Demo Video"></video>
+https://github.com/user-attachments/assets/af2995bd-ab17-4caa-89d4-3a46d8532e2b
+
