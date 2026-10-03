@@ -1,0 +1,11 @@
+[build]
+  publish = "build/web"
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+[build.environment]
+  NODE_VERSION = "24"
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

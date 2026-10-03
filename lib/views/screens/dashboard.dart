@@ -28,9 +28,6 @@ class Dashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     final responsive = Responsive(context);
 
-    // Start loading data on widget build
-    controller.loadData();
-
     return Scaffold(
       body: Obx(() {
         return Column(
@@ -69,14 +66,14 @@ class Dashboard extends StatelessWidget {
                         context,
                         'Expense',
                         'assets/light/expense_card.png',
-                        controller.expenseAmount.value.toInt(),
+                        controller.expenseAmount.value,
                         responsive,
                       ),
                       buildStatCard(
                         context,
                         'Income',
                         'assets/light/income_icon.png',
-                        controller.incomeAmount.value.toInt(),
+                        controller.incomeAmount.value,
                         responsive,
                       ),
                     ],
@@ -103,8 +100,7 @@ class Dashboard extends StatelessWidget {
           final result =
               await Navigator.pushNamed(context, "/create-transaction");
           if (result == true) {
-            controller
-                .loadData();
+            controller.loadData();
           }
         },
         child: const Icon(Icons.add),

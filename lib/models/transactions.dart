@@ -89,5 +89,5 @@ class Transactions {
         "income": income,
         "id": id,
         "description": description,
-      };
+      }..removeWhere((key, value) => value == null);
 }

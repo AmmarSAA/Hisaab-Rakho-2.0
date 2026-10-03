@@ -61,7 +61,6 @@ class DashboardController extends GetxController {
           userEmail.value = user.email.toString();
           userName.value = user.name.toString();
           userAvatar.value = user.avatar.toString();
-          debugPrint('dashboard User fetched: ${user.name}');
         } else {
           debugPrint('No user found.');
         }
@@ -85,12 +84,12 @@ class DashboardController extends GetxController {
       isLoading(false);
     }
   }
-  
+
   // Delete a transaction
   void deleteTransaction(String id) async {
     final success = await TransactionService.deleteTransaction(id);
     if (success) {
-      transactions.removeWhere((transaction) => transaction.id == id);
+      await loadData();
       Get.snackbar("Success", "Transaction deleted successfully.",
           snackPosition: SnackPosition.BOTTOM);
     } else {

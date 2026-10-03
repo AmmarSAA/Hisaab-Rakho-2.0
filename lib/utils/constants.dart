@@ -10,9 +10,9 @@
 /*| Description: Constants for the application                                   |*/
 /*+------------------------------------------------------------------------------+*/
 
-
 // ignore_for_file: constant_identifier_names
 
-class Constants{
-  static const String DATABASE_URL = "https://hisaab-rakho-api-production-bad1.up.railway.app";
+class Constants {
+  static const String DATABASE_URL =
+      "https://hisaab-private-api.s-ammarahmed14.workers.dev";
 }

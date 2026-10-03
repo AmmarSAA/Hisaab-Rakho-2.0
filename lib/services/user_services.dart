@@ -1,160 +1,111 @@
-/*+------------------------------------------------------------------------------+*/
-/*|                            © 2024 Syed Ammar Ahmed                           |*/
-/*+------------------------------------------------------------------------------+*/
-/*+------------------------------------------------------------------------------+*/
-/*| File: user_services.dart                                                     |*/
-/*| Path: lib/services/user_services.dart                                        |*/
-/*| Author: Syed Ammar Ahmed                                                     |*/
-/*| Content: User Services                                                       |*/
-/*| Output: Implement User Services                                              |*/
-/*| Description:                                                                 |*/
-/*| Implement the UserService class with the following methods:                  |*/
-/*| - verifyUser                                                                 |*/
-/*| - addUser                                                                    |*/
-/*| - getTransactionsForCurrentUser                                              |*/
-/*| - getUserDetails                                                             |*/
-/*+------------------------------------------------------------------------------+*/
-
 import 'dart:convert';
-
-import 'package:flutter/foundation.dart';
 import 'package:hisaab_rakho/models/transactions.dart';
 import 'package:hisaab_rakho/models/users.dart';
+import 'package:hisaab_rakho/services/api_client.dart';
 import 'package:hisaab_rakho/services/transaction_services.dart';
-import 'package:hisaab_rakho/utils/constants.dart';
 import 'package:hisaab_rakho/utils/session_manager.dart';
 import 'package:hisaab_rakho/utils/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 
 class UserService {
-  static const String _baseUrl = '${Constants.DATABASE_URL}/users';
+  static Future<AppUser> _saveAuthentication(String body) async {
+    final data = jsonDecode(body) as Map<String, dynamic>;
+    final user = AppUser.fromJson(data['user'] as Map<String, dynamic>);
+    if (user.id == null || user.email == null) {
+      throw const FormatException('Invalid user');
+    }
+    try {
+      await Api.client.session
+          .save(data['token'] as String, data['expires_at'] as int);
+      await SharedPreferences.storeUserInSession(user);
+      await SessionManager().set('session', true);
+    } catch (_) {
+      await Api.client.session.clear();
+      await SessionManager().clear();
+      rethrow;
+    }
+    return user;
+  }
 
-  // Verify user by checking credentials
   static Future<AppUser?> verifyUser(String email, String password) async {
     try {
-      // Call API to fetch the user by email directly
-      final response = await http
-          .get(Uri.parse('$_baseUrl?email=${Uri.encodeComponent(email)}'));
-
+      final response = await Api.client.request('POST', '/auth/login',
+          authenticated: false,
+          body: {'email': email.trim(), 'password': password});
       if (response.statusCode == 200) {
-        final List<dynamic> users = json.decode(response.body);
-        debugPrint('Fetched users with email $email: ${users.length}');
-
-        if (users.isNotEmpty) {
-          final userJson = users[0];
-          if (userJson['password'] == password) {
-            debugPrint('User found: ${userJson['email']}');
-            return AppUser.fromJson(userJson);
-          } else {
-            debugPrint('Invalid password for email: $email');
-          }
-        } else {
-          debugPrint('No user found with email: $email');
-        }
-      } else {
-        debugPrint('Failed to fetch user: ${response.statusCode}');
+        return await _saveAuthentication(response.body);
       }
-    } catch (e) {
-      debugPrint('Error verifying user: $e');
-    }
+    } catch (_) {/* Show the same login failure without logging credentials. */}
     return null;
   }
 
-  // Add a new user
   static Future<Map<String, dynamic>> addUser(AppUser user) async {
-    bool emailExists = false;
-    debugPrint('Adding User:${user.toJson()}');
-    Map<String, dynamic> message = {
-      "message": "Something went wrong!",
-      "success": false
-    };
     try {
-      // Check if the email already exists
-      final emailCheckResponse = await http.get(
-        Uri.parse(
-            '$_baseUrl?email=${Uri.encodeComponent(user.email.toString())}'),
-        headers: {'Content-Type': 'application/json'},
-      );
-
-      if (emailCheckResponse.statusCode >= 200 &&
-          json.decode(emailCheckResponse.body).isNotEmpty) {
-        // Email already exists
-        debugPrint('Email already exists: ${user.email}');
-        message = {"message": "Email already exists", "success": false};
-        emailExists = true;
-      } else {
-        debugPrint('Email does not exist: ${user.email}');
-        emailExists = false;
+      final response = await Api.client
+          .request('POST', '/auth/register', authenticated: false, body: {
+        'name': user.name,
+        'email': user.email?.trim(),
+        'password': user.password,
+        'avatar': user.avatar,
+        'currency_symbol': user.currencySymbol,
+        'currency_name': user.currencyName
+      });
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        await _saveAuthentication(response.body);
+        return {'success': true, 'message': 'Sign up successful'};
       }
-
-      if (emailExists == false) {
-        final response = await http.post(
-          Uri.parse(_baseUrl),
-          headers: {'Content-Type': 'application/json'},
-          body: json.encode(user.toJson()),
-        );
-
-        if (response.statusCode >= 200 && response.body.isNotEmpty) {
-          message = {"message": "Sign up successful", "success": true};
-          debugPrint('User added successfully: ${response.body}');
-        } else {
-          debugPrint('Error: Status code ${response.statusCode}');
-          message = {"message": "Something went wrong", "success": false};
-        }
-
-        if (response.statusCode >= 500 && response.statusCode < 600) {
-          message = {
-            "message": "${response.statusCode} Network Error",
-            "success": false
-          };
-        }
-      }
-    } catch (e) {
-      debugPrint('Error adding user: $e');
-      message = {"message": "Something went wrong", "success": false};
+      return {
+        'success': false,
+        'message': response.statusCode == 429
+            ? 'Please wait before trying again.'
+            : 'Unable to create account. Check your details and password (at least 12 characters).'
+      };
+    } catch (_) {
+      return {
+        'success': false,
+        'message': 'Unable to connect. Please try again.'
+      };
     }
-
-    return message;
   }
 
-  // Get transactions for the current user
   static Future<List<Transactions>> getTransactionsForCurrentUser() async {
-    final userID = await SessionManager().get("id");
-    debugPrint("usrID: $userID");
+    final userID = await SessionManager().get('id');
     if (userID == null) return [];
-    debugPrint('Fetching transactions for: $userID');
-    debugPrint(
-        'User Transactions: ${TransactionService.getTransactionsByUserID(userID)}');
     return TransactionService.getTransactionsByUserID(userID);
   }
 
-  // Get user details by email
   static Future<AppUser?> getUserDetails(String email) async {
-    try {
-      // Ensure the email is properly encoded to avoid URL issues
-      final response = await http
-          .get(Uri.parse('$_baseUrl?email=${Uri.encodeComponent(email)}'));
+    final response = await Api.client.request('GET', '/auth/me');
+    if (response.statusCode != 200) throw Exception('Unable to load profile');
+    final user =
+        AppUser.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    await SharedPreferences.storeUserInSession(user);
+    return user;
+  }
 
-      if (response.statusCode == 200) {
-        final List<dynamic> userData = json.decode(response.body);
-
-        if (userData.isNotEmpty) {
-          final userJson = userData[0]; // Assuming the API returns a list
-          AppUser user = AppUser.fromJson(userJson);
-
-          // Store user data in shared preferences
-          await SharedPreferences.storeUserInSession(user);
-
-          return user;
-        } else {
-          return null;
-        }
-      } else {
-        return null;
-      }
-    } catch (e) {
-      debugPrint('Error fetching user details: $e');
-      return null;
+  static Future<bool> restoreSession() async {
+    if (await Api.client.session.token() == null) {
+      await SessionManager().clear();
+      return false;
     }
+    try {
+      await getUserDetails('');
+      return true;
+    } catch (_) {
+      await Api.client.session.clear();
+      await SessionManager().clear();
+      return false;
+    }
+  }
+
+  static Future<String> requestRecovery(String email) async {
+    final response = await Api.client.request('POST', '/auth/recover',
+        authenticated: false, body: {'email': email.trim()});
+    if (response.statusCode == 429) {
+      return 'Please wait before requesting another email.';
+    }
+    if (response.statusCode != 202) {
+      throw Exception('Unable to request recovery. Please try again.');
+    }
+    return 'If this email has an account, a recovery link will arrive shortly. Check your spam folder too.';
   }
 }
