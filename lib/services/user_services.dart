@@ -31,8 +31,9 @@ class UserService {
       final response = await Api.client.request('POST', '/auth/login',
           authenticated: false,
           body: {'email': email.trim(), 'password': password});
-      if (response.statusCode == 200)
+      if (response.statusCode == 200) {
         return await _saveAuthentication(response.body);
+      }
     } catch (_) {/* Show the same login failure without logging credentials. */}
     return null;
   }
