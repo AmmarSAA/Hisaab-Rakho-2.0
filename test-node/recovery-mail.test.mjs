@@ -1,0 +1,21 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createHmac} from 'node:crypto';
+import {relay} from '../netlify/functions/_shared/recovery-mail.mts';
+test('signed relay rejects unauthorized and malformed requests without sending',async()=>{
+ const now=1700000000000,secret='s'.repeat(64),sent=[];
+ const env={RECOVERY_RELAY_SECRET:secret,SMTP_HOST:'smtp.example.com',SMTP_PORT:'587',SMTP_USER:'sender@example.com',SMTP_PASS:'private',MAIL_FROM:'sender@example.com'};
+ const input={email:'owner@example.com',resetUrl:'https://hisaab-private-api.s-ammarahmed14.workers.dev/reset#'+'a'.repeat(64)};
+ const request=(value=input,{timestamp=String(now),signature,method='POST',raw=JSON.stringify(value)}={})=>new Request('https://site.example/api/recovery-mail',{method,headers:{'X-Hisaab-Timestamp':timestamp,'X-Hisaab-Signature':signature??createHmac('sha256',secret).update(timestamp+'\n'+raw).digest('hex')},...(method==='POST'?{body:raw}:{})});
+ const call=req=>relay(req,name=>env[name],async(options,message)=>sent.push({options,message}),now);
+ assert.equal((await call(request())).status,200);assert.equal(sent.length,1);assert.equal(sent[0].options.requireTLS,true);assert.equal(sent[0].message.to,input.email);
+ assert.equal((await call(request(input,{signature:'0'.repeat(64)}))).status,401);
+ assert.equal((await call(request(input,{timestamp:String(now-300001)}))).status,401);
+ assert.equal((await call(request(input,{method:'GET'}))).status,405);
+ assert.equal((await call(request({...input,email:'owner@example.com\r\nBcc:attacker@example.com'}))).status,400);
+ for(const resetUrl of ['https://evil.example/reset#'+'a'.repeat(64),input.resetUrl.replace('/reset#','/reset?leak=1#'),input.resetUrl.replace('https://','https://username@')])assert.equal((await call(request({...input,resetUrl}))).status,400);
+ assert.equal((await call(request({...input,from:'attacker@example.com'}))).status,400);
+ assert.equal((await call(request(input,{raw:'x'.repeat(8193)}))).status,413);assert.equal(sent.length,1);
+ delete env.SMTP_PASS;assert.equal((await call(request())).status,503);assert.equal(sent.length,1);
+ env.SMTP_PASS='private';const failed=await relay(request(),name=>env[name],async()=>{throw Error('credential leaked');},now);assert.equal(failed.status,503);assert.doesNotMatch(await failed.text(),/credential/);
+});
