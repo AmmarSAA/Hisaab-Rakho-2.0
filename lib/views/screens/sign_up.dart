@@ -14,12 +14,24 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hisaab_rakho/models/users.dart';
 import 'package:hisaab_rakho/services/user_services.dart';
-import 'package:hisaab_rakho/utils/id_gen.dart';
-import 'package:hisaab_rakho/utils/responsive.dart';
-import 'package:hisaab_rakho/utils/session_manager.dart';
 
-class SignUp extends StatelessWidget {
-  SignUp({super.key});
+import 'package:hisaab_rakho/utils/responsive.dart';
+
+class SignUp extends StatefulWidget {
+  const SignUp({super.key});
+  @override
+  State<SignUp> createState() => _SignUpState();
+}
+
+class _SignUpState extends State<SignUp> {
+  bool _busy = false;
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    nameController.dispose();
+    super.dispose();
+  }
 
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
@@ -105,6 +117,7 @@ class SignUp extends StatelessWidget {
                       decoration: const InputDecoration(
                         hintText: '********',
                         labelText: 'Password',
+                        helperText: 'At least 12 characters',
                         hintStyle: TextStyle(fontSize: 16),
                         labelStyle: TextStyle(
                           fontWeight: FontWeight.bold,
@@ -141,61 +154,77 @@ class SignUp extends StatelessWidget {
                     horizontal: responsive.wp(10), // 10% horizontal padding
                   ),
                   child: ElevatedButton(
-                    onPressed: () async {
-                      if (nameController.text.isNotEmpty &&
-                          emailController.text.isNotEmpty &&
-                          passwordController.text.isNotEmpty) {
-                        final newUser = AppUser(
-                          createdAt: DateTime.now(),
-                          id: id,
-                          name: nameController.text,
-                          email: emailController.text,
-                          password: passwordController.text,
-                        );
+                    onPressed: _busy
+                        ? null
+                        : () async {
+                            setState(() => _busy = true);
+                            try {
+                              if (nameController.text.isNotEmpty &&
+                                  emailController.text.isNotEmpty &&
+                                  passwordController.text.isNotEmpty) {
+                                if (passwordController.text.length < 12) {
+                                  Get.snackbar('Password',
+                                      'Use at least 12 characters.');
+                                  return;
+                                }
+                                final newUser = AppUser(
+                                  createdAt: DateTime.now(),
+                                  name: nameController.text,
+                                  email: emailController.text,
+                                  password: passwordController.text,
+                                );
 
-                        // Call the UserService's addUser method
-                        Object addedSuccessfully =
-                            await UserService.addUser(newUser);
+                                // Call the UserService's addUser method
+                                Object addedSuccessfully =
+                                    await UserService.addUser(newUser);
 
-                        if (addedSuccessfully is Map<String, dynamic>) {
-                          bool isSuccess =
-                              addedSuccessfully['success'] ?? false;
-                          String message = addedSuccessfully['message'] ??
-                              'Please connect to the internet.';
-                          String title = isSuccess ? 'Woohoo!' : 'Oops!';
+                                if (addedSuccessfully is Map<String, dynamic>) {
+                                  bool isSuccess =
+                                      addedSuccessfully['success'] ?? false;
+                                  String message =
+                                      addedSuccessfully['message'] ??
+                                          'Please connect to the internet.';
+                                  String title =
+                                      isSuccess ? 'Woohoo!' : 'Oops!';
 
-                          if (!isSuccess) {
-                            debugPrint('Unknown error occurred');
-                          }
+                                  if (!isSuccess) {
+                                    debugPrint('Unknown error occurred');
+                                  }
 
-                          if (isSuccess) {
-                            nameController.clear();
-                            emailController.clear();
-                            passwordController.clear();
-                            await SessionManager().set('email', newUser.email);
-                            await SessionManager().set('session', true);
-                            Get.snackbar("Woohoo!", message);
-                            await Future.delayed(const Duration(seconds: 2));
-                            Navigator.pushNamed(context, '/dashboard');
+                                  if (isSuccess) {
+                                    nameController.clear();
+                                    emailController.clear();
+                                    passwordController.clear();
 
-                            Get.snackbar(
-                              title,
-                              message,
-                              snackPosition: SnackPosition.BOTTOM,
-                            );
-                          } else {
-                            Get.snackbar(title, message,
-                                backgroundColor: Colors.red);
-                          }
-                        } else {
-                          Get.snackbar(
-                              'Alert!', 'Please connect to the internet.',
-                              backgroundColor: Colors.yellow);
-                        }
-                      } else {
-                        Get.snackbar('Hey!', 'Fill all the fields.');
-                      }
-                    },
+                                    Get.snackbar("Woohoo!", message);
+                                    await Future.delayed(
+                                        const Duration(seconds: 2));
+                                    if (context.mounted) {
+                                      Navigator.pushNamedAndRemoveUntil(
+                                          context, '/dashboard', (_) => false);
+                                    }
+
+                                    Get.snackbar(
+                                      title,
+                                      message,
+                                      snackPosition: SnackPosition.BOTTOM,
+                                    );
+                                  } else {
+                                    Get.snackbar(title, message,
+                                        backgroundColor: Colors.red);
+                                  }
+                                } else {
+                                  Get.snackbar('Alert!',
+                                      'Please connect to the internet.',
+                                      backgroundColor: Colors.yellow);
+                                }
+                              } else {
+                                Get.snackbar('Hey!', 'Fill all the fields.');
+                              }
+                            } finally {
+                              if (mounted) setState(() => _busy = false);
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,
                       shape: RoundedRectangleBorder(

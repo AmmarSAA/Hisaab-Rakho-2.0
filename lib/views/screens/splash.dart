@@ -16,25 +16,27 @@
 
 import 'package:flutter/material.dart';
 import 'package:hisaab_rakho/utils/responsive.dart';
-import 'package:hisaab_rakho/utils/session_manager.dart';
+import 'package:hisaab_rakho/services/user_services.dart';
 
 class Splash extends StatefulWidget {
   const Splash({super.key});
 
   @override
-  _SplashState createState() => _SplashState();
+  State<Splash> createState() => _SplashState();
 }
 
 class _SplashState extends State<Splash> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 3), () async {
-      bool? session = await SessionManager().get('session');
-      session ?? false
-          ? Navigator.pushReplacementNamed(context, '/dashboard')
-          : Navigator.pushReplacementNamed(context, '/sign-in');
-    });
+    _restore();
+  }
+
+  Future<void> _restore() async {
+    final restored = await UserService.restoreSession();
+    if (!mounted) return;
+    Navigator.pushNamedAndRemoveUntil(
+        context, restored ? '/dashboard' : '/sign-in', (route) => false);
   }
 
   @override

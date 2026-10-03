@@ -14,10 +14,21 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hisaab_rakho/services/user_services.dart';
 import 'package:hisaab_rakho/utils/responsive.dart';
-import 'package:hisaab_rakho/utils/session_manager.dart';
 
-class SignIn extends StatelessWidget {
-  SignIn({super.key});
+class SignIn extends StatefulWidget {
+  const SignIn({super.key});
+  @override
+  State<SignIn> createState() => _SignInState();
+}
+
+class _SignInState extends State<SignIn> {
+  bool _busy = false;
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
 
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
@@ -74,8 +85,7 @@ class SignIn extends StatelessWidget {
                           fontSize: 18,
                         ),
                       ),
-                      style: TextStyle(
-                          fontSize: responsive.sp(18)),
+                      style: TextStyle(fontSize: responsive.sp(18)),
                     ),
                     const SizedBox(height: 16),
                     // Password Field
@@ -92,8 +102,36 @@ class SignIn extends StatelessWidget {
                           fontSize: 18,
                         ),
                       ),
-                      style: TextStyle(
-                          fontSize: responsive.sp(18)),
+                      style: TextStyle(fontSize: responsive.sp(18)),
+                    ),
+                    TextButton(
+                      onPressed: _busy
+                          ? null
+                          : () async {
+                              setState(() => _busy = true);
+                              try {
+                                if (emailController.text.trim().isEmpty) {
+                                  Get.snackbar(
+                                      'Recovery', 'Enter your email first.');
+                                  return;
+                                }
+                                final message =
+                                    await UserService.requestRecovery(
+                                        emailController.text);
+                                if (context.mounted) {
+                                  Get.snackbar('Recovery', message,
+                                      duration: const Duration(seconds: 8));
+                                }
+                              } catch (_) {
+                                if (context.mounted) {
+                                  Get.snackbar('Recovery',
+                                      'Unable to request recovery. Please try again.');
+                                }
+                              } finally {
+                                if (mounted) setState(() => _busy = false);
+                              }
+                            },
+                      child: const Text('Recover account / forgot password'),
                     ),
                     // Sign Up Link
                     GestureDetector(
@@ -122,41 +160,46 @@ class SignIn extends StatelessWidget {
                   padding: EdgeInsets.symmetric(
                       horizontal: responsive.wp(10)), // 10% horizontal padding
                   child: ElevatedButton(
-                    onPressed: () async {
-                      String email = emailController.text.trim();
-                      String password = passwordController.text.trim();
+                    onPressed: _busy
+                        ? null
+                        : () async {
+                            setState(() => _busy = true);
+                            try {
+                              String email = emailController.text.trim();
+                              String password = passwordController.text;
 
-                      if (email.isNotEmpty && password.isNotEmpty) {
-                        var user =
-                            await UserService.verifyUser(email, password);
+                              if (email.isNotEmpty && password.isNotEmpty) {
+                                var user = await UserService.verifyUser(
+                                    email, password);
 
-                        if (user != null) {
-                          await SessionManager().set('session', true);
-                          await SessionManager().set('email', email.toString());
-                          debugPrint("sign-in email: $email");
-
-                          // Navigate to dashboard on successful sign-in
-                          Navigator.pushNamed(context, '/dashboard');
-                        } else {
-                          // Invalid credentials
-                          Get.snackbar('Oops!', 'Invalid credentials.',
-                              backgroundColor: Colors.red);
-                        }
-                      } else {
-                        // Show alert for empty fields
-                        Get.snackbar(
-                          'Hey!',
-                          'Fill all the fields.',
-                        );
-                      }
-                    },
+                                if (user != null) {
+                                  // Navigate to dashboard on successful sign-in
+                                  if (context.mounted) {
+                                    Navigator.pushNamedAndRemoveUntil(
+                                        context, '/dashboard', (_) => false);
+                                  }
+                                } else {
+                                  // Invalid credentials
+                                  Get.snackbar('Oops!', 'Invalid credentials.',
+                                      backgroundColor: Colors.red);
+                                }
+                              } else {
+                                // Show alert for empty fields
+                                Get.snackbar(
+                                  'Hey!',
+                                  'Fill all the fields.',
+                                );
+                              }
+                            } finally {
+                              if (mounted) setState(() => _busy = false);
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(5),
                       ),
-                      minimumSize: Size(responsive.wp(60),
-                          responsive.hp(7)),
+                      minimumSize: Size(responsive.wp(60), responsive.hp(7)),
                     ),
                     child: Text(
                       'Sign In',

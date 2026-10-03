@@ -15,11 +15,10 @@ import 'package:hisaab_rakho/utils/responsive.dart';
 import 'package:get/get.dart';
 import 'package:hisaab_rakho/controllers/dashboard.dart';
 
-final DashboardController controller = Get.put(DashboardController());
-
 // Widget for Stat Card (for both Expense and Income)
 Widget buildStatCard(BuildContext context, String title, String asset,
-    int amount, Responsive responsive) {
+    num amount, Responsive responsive) {
+  final controller = Get.find<DashboardController>();
   return Container(
     padding: const EdgeInsets.all(30),
     width: responsive.wp(45),
@@ -40,7 +39,7 @@ Widget buildStatCard(BuildContext context, String title, String asset,
           style:
               const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        Text('${controller.currencySymbol.value}$amount',
+        Text('${controller.currencySymbol.value}${amount.toStringAsFixed(2)}',
             style: const TextStyle(color: Colors.white)),
       ],
     ),

@@ -13,6 +13,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hisaab_rakho/controllers/transaction.dart';
+import 'package:hisaab_rakho/controllers/dashboard.dart';
 import 'package:hisaab_rakho/utils/responsive.dart';
 
 class TransactionActions extends StatelessWidget {
@@ -102,8 +103,12 @@ class TransactionActions extends StatelessWidget {
                   if (response['success']) {
                     Get.snackbar("Woohoo!", response['message'],
                         snackPosition: SnackPosition.BOTTOM);
-                    await Future.delayed(const Duration(seconds: 2));
-                    Navigator.popAndPushNamed(context, '/dashboard');
+                    if (Get.isRegistered<DashboardController>()) {
+                      await Get.find<DashboardController>().loadData();
+                    }
+                    if (context.mounted) {
+                      Navigator.pop(context, true);
+                    }
                   } else {
                     Get.snackbar("Oops!", response['message'],
                         snackPosition: SnackPosition.BOTTOM);
@@ -113,8 +118,12 @@ class TransactionActions extends StatelessWidget {
                   if (response['success']) {
                     Get.snackbar("Woohoo!", response['message'],
                         snackPosition: SnackPosition.BOTTOM);
-                    await Future.delayed(const Duration(seconds: 2));
-                    Navigator.popAndPushNamed(context, '/dashboard');
+                    if (Get.isRegistered<DashboardController>()) {
+                      await Get.find<DashboardController>().loadData();
+                    }
+                    if (context.mounted) {
+                      Navigator.pop(context, true);
+                    }
                   } else {
                     Get.snackbar("Oops!", response['message'],
                         snackPosition: SnackPosition.BOTTOM);

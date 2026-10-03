@@ -53,8 +53,6 @@ class ProfileController extends GetxController {
         userEmail.value = user.email.toString();
         userName.value = user.name.toString();
         userAvatar.value = user.avatar.toString();
-        debugPrint('User fetched: ${user.name}');
-        debugPrint('Email fetched: ${user.email}');
       } else {
         debugPrint('No user found or error occurred');
         userName.value = 'User not found';

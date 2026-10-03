@@ -19,32 +19,32 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:hisaab_rakho/models/transactions.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:hisaab_rakho/utils/constants.dart';
+import 'package:hisaab_rakho/services/api_client.dart';
 
 class TransactionService {
-  static const String _baseUrl = '${Constants.DATABASE_URL}/transaction';
+  static const String _baseUrl = '/transaction';
 
   // Fetch expenses and income, and calculate sums
-  static Future<Map<String, int>> getExpensesAndIncome(String userID) async {
+  static Future<Map<String, double>> getExpensesAndIncome(String userID) async {
     try {
       final List<Transactions> transactions =
           await getTransactionsByUserID(userID);
-      int expenses = 0;
-      int income = 0;
+      double expenses = 0;
+      double income = 0;
 
       for (var transaction in transactions) {
         if (transaction.income != null && transaction.amount != null) {
           if (transaction.income!) {
-            income += transaction.amount!.toInt();
+            income += transaction.amount!;
           } else {
-            expenses += transaction.amount!.toInt();
+            expenses += transaction.amount!;
           }
         }
       }
 
       return {'expenses': expenses, 'income': income};
+    } on SessionExpired {
+      rethrow;
     } catch (e) {
       debugPrint('Error fetching transactions: $e');
       return {'expenses': 0, 'income': 0};
@@ -52,10 +52,12 @@ class TransactionService {
   }
 
   // Calculate the balance (income - expenses)
-  static Future<int> calculateBalance(String email) async {
+  static Future<double> calculateBalance(String email) async {
     try {
-      final Map<String, int> results = await getExpensesAndIncome(email);
+      final Map<String, double> results = await getExpensesAndIncome(email);
       return results['income']! - results['expenses']!;
+    } on SessionExpired {
+      rethrow;
     } catch (e) {
       debugPrint('Error calculating balance: $e');
       return 0;
@@ -70,11 +72,8 @@ class TransactionService {
     };
 
     try {
-      final response = await http.post(
-        Uri.parse(_baseUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(transaction.toJson()),
-      );
+      final response = await Api.client
+          .request('POST', _baseUrl, body: transaction.toJson());
 
       if (response.statusCode == 201) {
         message = {
@@ -88,6 +87,8 @@ class TransactionService {
           "success": false
         };
       }
+    } on SessionExpired {
+      rethrow;
     } catch (e) {
       debugPrint('Error creating transaction: $e');
       message = {"message": "Failed to create transaction.", "success": false};
@@ -100,29 +101,28 @@ class TransactionService {
   static Future<List<Transactions>> getTransactionsByUserID(
       String userID) async {
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl?user_id=$userID'),
-      );
+      final response = await Api.client
+          .request('GET', '$_baseUrl?user_id=${Uri.encodeComponent(userID)}');
       // debugPrint('$_baseUrl?user_id=$userID');
       // debugPrint('Response: ${response.body}');
       if (response.statusCode == 200) {
         return transactionsFromJson(response.body);
       } else {
         // debugPrint('Failed to fetch transactions: ${response.statusCode}');
-        return [];
+        throw Exception('Unable to load transactions');
       }
+    } on SessionExpired {
+      rethrow;
     } catch (e) {
-      // debugPrint('Error fetching transactions: $e');
-      return [];
+      throw Exception('Unable to load transactions');
     }
   }
 
   // Delete a transaction by ID
   static Future<bool> deleteTransaction(String id) async {
     try {
-      final response = await http.delete(
-        Uri.parse('$_baseUrl/$id'),
-      );
+      final response = await Api.client
+          .request('DELETE', '$_baseUrl/${Uri.encodeComponent(id)}');
 
       if (response.statusCode == 200) {
         return true;
@@ -130,6 +130,8 @@ class TransactionService {
         debugPrint('Failed to delete transaction: ${response.statusCode}');
         return false;
       }
+    } on SessionExpired {
+      rethrow;
     } catch (e) {
       debugPrint('Error deleting transaction: $e');
       return false;
@@ -143,11 +145,9 @@ class TransactionService {
       "success": false
     };
     try {
-      final response = await http.put(
-        Uri.parse('$_baseUrl/$id'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(transaction.toJson()),
-      );
+      final response = await Api.client.request(
+          'PUT', '$_baseUrl/${Uri.encodeComponent(id)}',
+          body: transaction.toJson());
 
       if (response.statusCode == 200) {
         message = {
@@ -161,6 +161,8 @@ class TransactionService {
           "success": false
         };
       }
+    } on SessionExpired {
+      rethrow;
     } catch (e) {
       debugPrint('Error updating transaction: $e');
       message = {

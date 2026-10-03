@@ -39,7 +39,7 @@ BottomNavigationBar bottomNavigation(BuildContext context, int currentIndex) {
           // Navigate to "Create Transaction" and await its result
           final result =
               await Navigator.pushNamed(context, '/create-transaction');
-          if (result == true) {
+          if (result == true && context.mounted) {
             // If a transaction was created, refresh the dashboard
             Navigator.pushNamedAndRemoveUntil(
                 context, '/dashboard', (route) => false);

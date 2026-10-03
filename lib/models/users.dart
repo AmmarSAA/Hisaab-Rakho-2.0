@@ -85,8 +85,12 @@ class AppUser {
         income: json["income"] != null ? json["income"].toString() : '0',
         expense: json["expense"] != null ? json["expense"].toString() : '0',
         amount: json["amount"] != null ? json["amount"].toString() : '0',
-        gender: json["gender"],
-        id: json["id"], 
+        gender: json["gender"] is bool
+            ? json["gender"]
+            : json["gender"] == null
+                ? null
+                : json["gender"].toString() == 'true',
+        id: json["id"],
       );
 
   Map<String, dynamic> toJson() => {

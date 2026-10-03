@@ -21,8 +21,8 @@ import 'package:hisaab_rakho/views/screens/dashboard.dart';
 
 final Map<String, WidgetBuilder> appRoutes = {
   '/': (context) => const Splash(),
-  '/sign-in': (context) => SignIn(),
-  '/sign-up': (context) => SignUp(),
+  '/sign-in': (context) => const SignIn(),
+  '/sign-up': (context) => const SignUp(),
   '/dashboard': (context) => Dashboard(),
   '/home': (context) => const Home(),
   '/profile': (context) => Profile(),

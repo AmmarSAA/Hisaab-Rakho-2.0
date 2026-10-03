@@ -14,8 +14,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hisaab_rakho/utils/routes.dart';
+import 'package:hisaab_rakho/services/auth_navigation.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  AuthNavigation.configure();
   runApp(const MyApp());
 }
 
